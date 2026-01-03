@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sistema de Reserva de Salas</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="icon" href="assets/favicon.png" />
+
+  <!-- CSS do projeto -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Topbar -->
+  <header class="topbar border-bottom">
+    <div class="container py-3 d-flex align-items-center justify-content-between gap-3 flex-wrap">
+      <div class="d-flex align-items-center gap-2">
+        <div class="brand-icon d-grid place-center">
+          <i class="bi bi-calendar2-check fs-4"></i>
+        </div>
+        <div>
+          <h1 class="h5 m-0">Sistema de Reserva de Salas</h1>
+          <p class="m-0 small text-secondary">Front-end only • Bootstrap + localStorage</p>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <button id="btnExport" class="btn btn-outline-dark btn-sm">
+        <i class="bi bi-filetype-csv me-1"></i> Exportar CSV
+        </button>
+        <button id="btnReset" class="btn btn-outline-danger btn-sm">
+          <i class="bi bi-trash3 me-1"></i> Limpar reservas
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container my-4">
+    <!-- ALERTA -->
+    <div id="alertArea" class="mb-3"></div>
+
+    <div class="row g-4">
+      <!-- COLUNA ESQUERDA: CONFIG -->
+      <section class="col-12 col-lg-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="h6 mb-3 d-flex align-items-center gap-2">
+              <i class="bi bi-sliders"></i> Configurar reserva
+            </h2>
+
+            <div class="mb-3">
+              <label class="form-label">Selecione a data</label>
+              <input id="datePicker" type="date" class="form-control" />
+              <div class="form-text">As reservas são por dia e por sala.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Filtrar salas</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input id="searchRoom" type="text" class="form-control" placeholder="Ex: Reunião, Lab, Auditório..." />
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Sala selecionada</label>
+              <div class="p-3 rounded bg-light border">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                  <div>
+                    <div id="selectedRoomName" class="fw-semibold">Nenhuma</div>
+                    <div id="selectedRoomMeta" class="small text-secondary">Selecione uma sala na lista.</div>
+                  </div>
+                  <span id="selectedRoomBadge" class="badge text-bg-secondary">—</span>
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <h3 class="h6 mb-2 d-flex align-items-center gap-2">
+              <i class="bi bi-clock-history"></i> Horários do dia
+            </h3>
+            <p class="small text-secondary mb-3">
+              Clique em um horário <span class="text-success fw-semibold">disponível</span> para reservar.
+              Horários <span class="text-danger fw-semibold">ocupados</span> podem ser cancelados.
+            </p>
+
+            <div id="timeSlots" class="timeslots"></div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mt-4">
+          <div class="card-body">
+            <h2 class="h6 mb-3 d-flex align-items-center gap-2">
+              <i class="bi bi-info-circle"></i> Como funciona
+            </h2>
+            <ul class="small text-secondary mb-0 ps-3">
+              <li>Escolha uma data e uma sala.</li>
+              <li>Clique em um horário disponível para reservar.</li>
+              <li>As reservas ficam salvas no navegador (localStorage).</li>
+              <li>Você pode cancelar clicando no horário ocupado.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUNA DIREITA: LISTA DE SALAS + RESERVAS -->
+      <section class="col-12 col-lg-8">
+        <div class="row g-4">
+          <div class="col-12">
+            <div class="card shadow-sm">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <h2 class="h6 m-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-building"></i> Salas
+                  </h2>
+
+                  <div class="d-flex gap-2">
+                    <span class="badge text-bg-success" id="badgeAvailable">0 disponíveis</span>
+                    <span class="badge text-bg-danger" id="badgeOccupied">0 ocupadas</span>
+                  </div>
+                </div>
+
+                <div class="mt-3 row g-3" id="roomsGrid">
+                  <!-- cards de salas via JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="card shadow-sm">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <h2 class="h6 m-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-list-check"></i> Reservas do dia
+                  </h2>
+                  <div class="small text-secondary">
+                    Data: <span id="dayLabel" class="fw-semibold">—</span>
+                  </div>
+                </div>
+
+                <div class="mt-3 table-responsive">
+                  <table class="table align-middle table-hover mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Hora</th>
+                        <th>Sala</th>
+                        <th>Reservado por</th>
+                        <th class="text-end">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody id="bookingsTable">
+                      <tr>
+                        <td colspan="4" class="text-center text-secondary py-4">
+                          Selecione uma data para visualizar.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="mt-3 small text-secondary">
+                  Dica: use nomes reais (ex: “Bruno - TI”) para parecer sistema corporativo.
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- MODAL: Reservar -->
+  <div class="modal fade" id="modalReserve" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <form class="modal-content" id="reserveForm" autocomplete="off">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-calendar-plus me-2"></i> Confirmar reserva
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-2 small text-secondary">
+            <div><span class="fw-semibold">Sala:</span> <span id="mRoom">—</span></div>
+            <div><span class="fw-semibold">Data:</span> <span id="mDate">—</span></div>
+            <div><span class="fw-semibold">Hora:</span> <span id="mTime">—</span></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Reservado por</label>
+            <input type="text" class="form-control" id="reservedBy" placeholder="Ex: Bruno - Administrativo" required maxlength="40">
+            <div class="form-text">Será salvo junto com a reserva.</div>
+          </div>
+
+          <div class="mb-0">
+            <label class="form-label">Motivo (opcional)</label>
+            <input type="text" class="form-control" id="reason" placeholder="Ex: Reunião com equipe" maxlength="60">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
+          <button type="submit" class="btn btn-dark">
+            <i class="bi bi-check2-circle me-1"></i> Reservar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Cancelar -->
+  <div class="modal fade" id="modalCancel" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-x-circle me-2"></i> Cancelar reserva
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">Tem certeza que deseja cancelar esta reserva?</p>
+          <div class="p-3 rounded bg-light border small">
+            <div><span class="fw-semibold">Sala:</span> <span id="cRoom">—</span></div>
+            <div><span class="fw-semibold">Data:</span> <span id="cDate">—</span></div>
+            <div><span class="fw-semibold">Hora:</span> <span id="cTime">—</span></div>
+            <div><span class="fw-semibold">Reservado por:</span> <span id="cBy">—</span></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
+          <button id="btnConfirmCancel" type="button" class="btn btn-danger">
+            <i class="bi bi-trash3 me-1"></i> Cancelar reserva
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- JS do projeto -->
+  <script src="js/script.js"></script>
+</body>
+</html>
